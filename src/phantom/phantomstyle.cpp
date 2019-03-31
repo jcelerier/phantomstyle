@@ -2618,12 +2618,6 @@ void PhantomStyle::drawControl(ControlElement element,
                           mbi->state & State_Enabled, mbi->text, textRole);
     if (isSelected)
       break;
-    if (Phantom::hasTweakTrue(widget, Phantom::Tweak::menubar_no_ruler))
-      break;
-    if (!isSelected) {
-      Ph::fillRectEdges(painter, r, Qt::BottomEdge, 1,
-                        swatch.color(S_window_divider));
-    }
     break;
   }
 #endif
@@ -2922,12 +2916,6 @@ void PhantomStyle::drawControl(ControlElement element,
     break;
   }
   case CE_MenuBarEmptyArea: {
-    if (Phantom::hasTweakTrue(widget, Phantom::Tweak::menubar_no_ruler))
-      break;
-    QRect rect = option->rect;
-    Ph::fillRectEdges(painter, rect, Qt::BottomEdge, 1,
-                      swatch.color(S_window_divider));
-    painter->fillRect(rect.adjusted(0, 0, 0, -1), swatch.color(S_window));
     break;
   }
 #if QT_CONFIG(tabbar)
