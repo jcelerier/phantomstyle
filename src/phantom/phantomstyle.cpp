@@ -86,20 +86,6 @@ Q_GUI_EXPORT int qt_defaultDpiX();
 QT_END_NAMESPACE
 
 namespace Phantom {
-namespace Tweak {
-const char* const menubar_no_ruler = "_phantom_menubar_no_ruler";
-}
-namespace {
-Q_NEVER_INLINE bool hasTweakTrue(const QObject* object, const char* tweakName) {
-  if (!object)
-    return false;
-  QVariant value = object->property(tweakName);
-  return value.toBool();
-}
-} // namespace
-} // namespace Phantom
-
-namespace Phantom {
 namespace {
 enum {
   MenuMinimumWidth = 10,  // Smallest width that menu items can have
@@ -5157,9 +5143,7 @@ QRect PhantomStyle::subElementRect(SubElement sr, const QStyleOption* opt,
 // However, they will still need to deal with the Q_OBJECT macro in the header.
 // Easiest way is to probably keep your own copy of the header without the
 // macro in it. (If there's a smarter way to do this, please let me know.)
-#ifndef PHANTOM_NO_MOC
-#include "moc_phantomstyle.cpp"
-#endif
+
 
 // Table header layout reference
 // -----------------------------
