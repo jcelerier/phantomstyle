@@ -213,6 +213,7 @@ static void
 xyz2luv(Triplet* in_out)
 {
     double divisor = in_out->a + (15.0 * in_out->b) + (3.0 * in_out->c);
+
     if(divisor <= 0.00000001) {
         in_out->a = 0.0;
         in_out->b = 0.0;
