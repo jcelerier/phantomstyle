@@ -98,8 +98,8 @@ enum {
 };
 
 static const qreal TabBarTab_Rounding = 0.0;
-static const qreal SpinBox_Rounding = 0.0;
-static const qreal LineEdit_Rounding = 0.0;
+static const qreal SpinBox_Rounding = 2.0;
+static const qreal LineEdit_Rounding = 2.0;
 static const qreal FrameFocusRect_Rounding = 1.0;
 static const qreal PushButton_Rounding = 2.0;
 static const qreal ToolButton_Rounding = 1.25;
@@ -284,6 +284,8 @@ enum SwatchColor {
   S_itemView_multiSelection_currentBorder,
   S_itemView_headerOnLine,
   S_scrollbarGutter_disabled,
+  S_frame_outline,
+  S_spinbox_base,
 
   // Aliases
   S_progressBar = S_highlight,
@@ -296,7 +298,7 @@ enum SwatchColor {
 using Swatchy = SwatchColors::SwatchColor;
 
 enum {
-  Num_SwatchColors = SwatchColors::S_scrollbarGutter_disabled + 1,
+  Num_SwatchColors = SwatchColors::S_spinbox_base + 1,
   Num_ShadowSteps = 3,
 };
 
@@ -380,6 +382,8 @@ Q_NEVER_INLINE void PhSwatch::loadFromQPalette(const QPalette& pal) {
       Dc::itemViewMultiSelectionCurrentBorderOf(pal);
   colors[S_itemView_headerOnLine] = Dc::itemViewHeaderOnLineColorOf(pal);
   colors[S_scrollbarGutter_disabled] = colors[S_window];
+  colors[S_frame_outline] = pal.color(QPalette::Midlight);
+  colors[S_spinbox_base] = pal.color(QPalette::Mid);
 
   brushes[S_none] = Qt::NoBrush;
   for (int i = S_none + 1; i < Num_SwatchColors; ++i) {
@@ -1652,30 +1656,6 @@ void PhantomStyle::drawPrimitive(PrimitiveElement elem,
     break;
   }
   case PE_PanelButtonTool: {
-    bool isDown = option->state & State_Sunken;
-    bool isOn = option->state & State_On;
-    bool hasFocus = (option->state & State_HasFocus &&
-                     option->state & State_KeyboardFocusChange);
-    const qreal rounding = Ph::ToolButton_Rounding;
-    Swatchy outline = S_window_outline;
-    Swatchy fill = S_button;
-    Swatchy specular = S_button_specular;
-    if (isDown) {
-      fill = S_button_pressed;
-      specular = S_button_pressed_specular;
-    } else if (isOn) {
-      // kinda repurposing this, hmm
-      fill = S_scrollbarGutter;
-      specular = S_none;
-    }
-    if (hasFocus) {
-      outline = S_highlight_outline;
-    }
-    QRect r = option->rect;
-    Ph::PSave save(painter);
-    Ph::paintBorderedRoundRect(painter, r, rounding, swatch, outline, fill);
-    Ph::paintBorderedRoundRect(painter, r.adjusted(1, 1, -1, -1), rounding,
-                               swatch, specular, S_none);
     break;
   }
   case PE_IndicatorDockWidgetResizeHandle: {
@@ -1693,7 +1673,7 @@ void PhantomStyle::drawPrimitive(PrimitiveElement elem,
     bool hasFocus = option->state & State_HasFocus;
     bool isEnabled = option->state & State_Enabled;
     const qreal rounding = Ph::LineEdit_Rounding;
-    auto pen = hasFocus ? S_highlight_outline : S_window_outline;
+    auto pen = hasFocus ? S_text : S_frame_outline;
     Ph::PSave save(painter);
     Ph::paintBorderedRoundRect(painter, r, rounding, swatch, pen, S_none);
     save.restore();
@@ -2639,7 +2619,7 @@ void PhantomStyle::drawControl(ControlElement element,
     bool isEnabled = menuItem->state & State_Enabled;
     bool hasSubMenu = menuItem->menuItemType == QStyleOptionMenuItem::SubMenu;
     if (isSelected) {
-      Swatchy fillColor = isSunken ? S_highlight_outline : S_highlight;
+      Swatchy fillColor = isSunken ? S_highlight_outline : S_indicator_current;
       painter->fillRect(option->rect, swatch.color(fillColor));
     }
 
@@ -2724,10 +2704,11 @@ void PhantomStyle::drawControl(ControlElement element,
                        Qt::TextDontClip | Qt::TextSingleLine;
       if (!styleHint(SH_UnderlineShortcut, menuItem, widget))
         text_flags |= Qt::TextHideMnemonic;
-#if 0
-      painter->save();
-#endif
-      painter->setPen(swatch.pen(isSelected ? S_highlightedText : S_text));
+
+      Swatchy text_color = !isEnabled ? S_indicator_disabled
+                                      :isSelected ? S_highlightedText : S_text;
+
+      painter->setPen(swatch.pen(text_color));
 
       // Comment from original Qt code which did some dance with the font:
       //
@@ -2802,10 +2783,6 @@ void PhantomStyle::drawControl(ControlElement element,
       const QString unsafeTextToDraw =
           QString::fromRawData(textToDrawRef.constData(), textToDrawRef.size());
       painter->drawText(textRect, text_flags, unsafeTextToDraw);
-
-#if 0
-      painter->restore();
-#endif
     }
 
     // SubMenu Arrow
@@ -3141,7 +3118,7 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
   }
 #if QT_CONFIG(spinbox)
   case CC_SpinBox: {
-    auto spinBox = qstyleoption_cast<const QStyleOptionSpinBox*>(option);
+   auto spinBox = qstyleoption_cast<const QStyleOptionSpinBox*>(option);
     if (!spinBox)
       break;
     const qreal rounding = Ph::SpinBox_Rounding;
@@ -3162,14 +3139,15 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
       painter->save(); // 0
       // Fill background
       Ph::paintBorderedRoundRect(painter, rect, rounding, swatch, S_none,
-                                 S_base);
+                                 S_spinbox_base);
       // Draw button fill
       painter->setClipRect(upDownRect);
       // Side with the border
       Qt::Edge edge = isLeftToRight ? Qt::LeftEdge : Qt::RightEdge;
       Ph::paintBorderedRoundRect(
           painter, Ph::expandRect(upDownRect, Ph::oppositeEdge(edge), -1),
-          rounding, swatch, S_none, S_button);
+          rounding, swatch, S_none, S_spinbox_base);
+
       painter->restore(); // 0
       if (Ph::OverhangShadows && !hasFocus && isEnabled) {
         // Imperfect, leaves tiny gap on left and right. Going closer would eat
@@ -3182,7 +3160,7 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
           shadowRect.setLeft(upDownRect.right());
         }
         Ph::fillRectEdges(painter, shadowRect, Qt::TopEdge, 1,
-                          swatch.color(S_base_shadow));
+                          swatch.color(S_spinbox_base));
       }
       if ((spinBox->stepEnabled & QAbstractSpinBox::StepUpEnabled) &&
           upIsActive && sunken) {
@@ -3195,12 +3173,13 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
       // Left or right border line
       Ph::fillRectEdges(painter, upDownRect, edge, 1,
                         swatch.color(S_window_outline));
+
       Ph::PSave save(painter);
       // Outline over entire frame
-      Swatchy outlineColor = hasFocus ? S_highlight_outline : S_window_outline;
+     /* Swatchy outlineColor = hasFocus ? S_highlight_outline : S_none;
       Ph::paintBorderedRoundRect(painter, rect, rounding, swatch, outlineColor,
-                                 S_none);
-      save.restore();
+                                 S_spinbox_base);
+      */save.restore();
     }
 
     if (spinBox->buttonSymbols == QAbstractSpinBox::PlusMinus) {
