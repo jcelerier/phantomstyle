@@ -2678,7 +2678,7 @@ void PhantomStyle::drawControl(ControlElement element,
       // int smallIconSize =
       //     proxy()->pixelMetric(PM_SmallIconSize, option, widget);
       // QSize iconSize(smallIconSize, smallIconSize);
-      int iconExtent = qMin(iconRect.width(), iconRect.height());
+      int iconExtent = 18;//qMin(iconRect.width(), iconRect.height());
       QSize iconSize(iconExtent, iconExtent);
 #if QT_CONFIG(combobox)
       if (auto combo = qobject_cast<const QComboBox*>(widget)) {
