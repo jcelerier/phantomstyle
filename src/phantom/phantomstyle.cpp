@@ -1573,7 +1573,7 @@ void PhantomStyle::drawPrimitive(PrimitiveElement elem,
     // fully reimplement CC_ToolButton. Note that it passes us a regular
     // QStyleOption and not a QStyleOptionToolButton in this case, so try to
     // save some work before doing the inherits test.
-    if (arrow == Qt::DownArrow &&
+    /*if (arrow == Qt::DownArrow &&
         !(bool)qstyleoption_cast<const QStyleOptionToolButton*>(option) &&
         widget) {
       auto tbutton = qobject_cast<const QToolButton*>(widget);
@@ -1591,7 +1591,8 @@ void PhantomStyle::drawPrimitive(PrimitiveElement elem,
           rx -= 1;
         }
       }
-    }
+    }*/
+    return;
 #endif
     aw += (rw - aw) % 2;
     ah += (rh - ah) % 2;
