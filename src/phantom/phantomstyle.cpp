@@ -5054,6 +5054,8 @@ int PhantomStyle::styleHint(StyleHint hint, const QStyleOption* option,
   }
   case SH_Widget_Animate:
     return 0;
+  case SH_Slider_AbsoluteSetButtons:
+    return Qt::AllButtons;
   default:
     break;
   }
