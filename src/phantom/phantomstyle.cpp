@@ -285,6 +285,7 @@ enum SwatchColor {
   S_itemView_headerOnLine,
   S_scrollbarGutter_disabled,
   S_frame_outline,
+  S_frame_outline_base,
   S_spinbox_base,
 
   // Aliases
@@ -382,7 +383,8 @@ Q_NEVER_INLINE void PhSwatch::loadFromQPalette(const QPalette& pal) {
       Dc::itemViewMultiSelectionCurrentBorderOf(pal);
   colors[S_itemView_headerOnLine] = Dc::itemViewHeaderOnLineColorOf(pal);
   colors[S_scrollbarGutter_disabled] = colors[S_window];
-  colors[S_frame_outline] = pal.color(QPalette::Midlight);
+  colors[S_frame_outline] = pal.color(QPalette::Light);
+  colors[S_frame_outline_base] = pal.color(QPalette::Midlight);
   colors[S_spinbox_base] = pal.color(QPalette::Mid);
 
   brushes[S_none] = Qt::NoBrush;
@@ -1037,7 +1039,7 @@ Q_NEVER_INLINE void drawArrow(QPainter* painter, QRect rect, Qt::ArrowType type,
   using namespace SwatchColors;
   Phantom::drawArrow(
       painter, rect, type,
-      swatch.brush(allowEnabled ? S_indicator_current : S_indicator_disabled));
+      swatch.brush(allowEnabled ? S_frame_outline_base : S_indicator_disabled )); //S_indicator_current : S_indicator_disabled));
 }
 
 // This draws exactly within the rect provided. If you provide a square rect,
@@ -1066,6 +1068,7 @@ Q_NEVER_INLINE void drawCheck(QPainter* painter, QPen& scratchPen,
     pnt.setY(pnt.y() * dimy + y);
     points[i] = pnt;
   }
+
   scratchPen.setBrush(swatch.brush(color));
   scratchPen.setCapStyle(Qt::RoundCap);
   scratchPen.setJoinStyle(Qt::RoundJoin);
@@ -1076,6 +1079,51 @@ Q_NEVER_INLINE void drawCheck(QPainter* painter, QPen& scratchPen,
   painter->setPen(scratchPen);
   painter->setBrush(Qt::NoBrush);
   painter->drawPolyline(points, 3);
+}
+
+Q_NEVER_INLINE void drawCross(QPainter* painter, QPen& scratchPen,
+                              const QRectF& r, const PhSwatch& swatch,
+                              Swatchy color) {
+ using namespace Phantom::SwatchColors;
+  qreal rx, ry, rw, rh;
+  QRectF(r).getRect(&rx, &ry, &rw, &rh);
+  qreal penWidth = 0.15 * qMin(rw, rh);
+  qreal dimx = rw - penWidth;
+  qreal dimy = rh - penWidth;
+  if (dimx < 0.5 || dimy < 0.5)
+    return;
+  qreal x = (rw - dimx) / 2 + rx;
+  qreal y = (rh - dimy) / 2 + ry;
+
+  QPointF line1[2];
+  QPointF line2[2];
+
+  line1[0] = QPointF(0.1, 0.2);
+  line1[1] = QPointF(0.9, 0.9);
+  line2[0] = QPointF(0.1, 0.9);
+  line2[1] = QPointF(0.9, 0.2);
+
+  for (int i = 0; i < 2; ++i) {
+    QPointF pnt = line1[i];
+    pnt.setX(pnt.x() * dimx + x);
+    pnt.setY(pnt.y() * dimy + y);
+    line1[i] = pnt;
+
+    QPointF pnt2 = line2[i];
+    pnt2.setX(pnt2.x() * dimx + x);
+    pnt2.setY(pnt2.y() * dimy + y);
+    line2[i] = pnt2;
+  }
+  scratchPen.setBrush(swatch.brush(color));
+  scratchPen.setCapStyle(Qt::RoundCap);
+  scratchPen.setWidthF(penWidth);
+  Phantom::PSave save(painter);
+  if (!painter->testRenderHint(QPainter::Antialiasing))
+    painter->setRenderHint(QPainter::Antialiasing);
+  painter->setPen(scratchPen);
+  painter->setBrush(Qt::NoBrush);
+   painter->drawLine(line1[0], line1[1]);
+   painter->drawLine(line2[0], line2[1]);
 }
 
 Q_NEVER_INLINE void drawHyphen(QPainter* painter, QPen& scratchPen,
@@ -1451,7 +1499,7 @@ void PhantomStyle::drawPrimitive(PrimitiveElement elem,
     // We'll also catch State_Selected and treat it equivalently (the way you'd
     // expect.) We'll use windowText instead of text, though -- probably
     // doesn't matter.
-    Swatchy fgColor = S_windowText;
+    Swatchy fgColor = S_frame_outline_base;
     bool isSelected = option->state & (State_Selected | State_On);
     bool isEnabled = option->state & State_Enabled;
     if (isSelected) {
@@ -1674,7 +1722,7 @@ void PhantomStyle::drawPrimitive(PrimitiveElement elem,
     bool hasFocus = option->state & State_HasFocus;
     bool isEnabled = option->state & State_Enabled;
     const qreal rounding = Ph::LineEdit_Rounding;
-    auto pen = hasFocus ? S_text : S_frame_outline;
+    auto pen = hasFocus ? S_frame_outline : S_frame_outline_base;
     Ph::PSave save(painter);
     Ph::paintBorderedRoundRect(painter, r, rounding, swatch, pen, S_none);
     save.restore();
@@ -1716,10 +1764,10 @@ void PhantomStyle::drawPrimitive(PrimitiveElement elem,
     bool isEnabled = option->state & State_Enabled;
     bool isPressed = state & State_Sunken;
     Swatchy outlineColor =
-        isHighlighted ? S_highlight_outline : S_window_outline;
-    Swatchy bgFillColor = isPressed ? S_highlight : S_base;
-    Swatchy fgColor = isFlat ? S_windowText : S_text;
-    if (isPressed && !isFlat) {
+        isHighlighted || isPressed? S_frame_outline : S_frame_outline_base;
+    Swatchy bgFillColor = isPressed ? S_frame_outline_base : S_base;
+    Swatchy fgColor = S_frame_outline;
+    if (isPressed){// && !isFlat) {
       fgColor = S_highlightedText;
     }
     // Bare checkmarks that are selected should draw with the highlighted text
@@ -1754,7 +1802,8 @@ void PhantomStyle::drawPrimitive(PrimitiveElement elem,
       qreal dimx = rw * insetScale * Ph::CheckMark_WidthOfHeightScale;
       qreal dimy = rh * insetScale;
       QRectF r_(rx + (rw - dimx) / 2, ry + (rh - dimy) / 2, dimx, dimy);
-      Ph::drawCheck(painter, d->checkBox_pen_scratch, r_, swatch, fgColor);
+    //  Ph::drawCheck(painter, d->checkBox_pen_scratch, r_, swatch, fgColor);
+      Ph::drawCross(painter, d->checkBox_pen_scratch, r_, swatch, fgColor);
     }
     break;
   }
@@ -1766,8 +1815,8 @@ void PhantomStyle::drawPrimitive(PrimitiveElement elem,
     bool isSunken = state & State_Sunken;
     bool isEnabled = state & State_Enabled;
     Swatchy outlineColor =
-        isHighlighted ? S_highlight_outline : S_window_outline;
-    Swatchy bgFillColor = isSunken ? S_highlight : S_base;
+        isHighlighted ? S_frame_outline  : S_window_outline;
+    Swatchy bgFillColor = isSunken ? S_frame_outline  : S_base;
     QPointF circleCenter(rx + rw / 2.0, ry + rh / 2.0);
     const qreal lineThickness = 1.0;
     qreal outlineRadius = (qMin(rw, rh) - lineThickness) / 2.0;
@@ -1954,7 +2003,7 @@ void PhantomStyle::drawPrimitive(PrimitiveElement elem,
       specular = S_button_pressed_specular;
     }
     if (hasFocus || isDefault) {
-      outline = S_highlight_outline;
+      outline = S_frame_outline ;
     }
     QRect r = option->rect;
     Ph::PSave save(painter);
@@ -2622,6 +2671,7 @@ void PhantomStyle::drawControl(ControlElement element,
     if (isSelected) {
       Swatchy fillColor = isSunken ? S_highlight_outline : S_indicator_current;
       painter->fillRect(option->rect, swatch.color(fillColor));
+      //Ph::paintBorderedRoundRect(painter, option->rect, 0, swatch, S_frame_outline_base, S_none);
     }
 
     if (isCheckable) {
@@ -2631,7 +2681,7 @@ void PhantomStyle::drawControl(ControlElement element,
                                               itemRect, hasSubMenu);
       Swatchy signColor = !isEnabled
                               ? S_windowText
-                              : isSelected ? S_highlightedText : S_windowText;
+                              : isSelected ? S_frame_outline_base : S_windowText;
       if (menuItem->checkType & QStyleOptionMenuItem::Exclusive) {
         // Radio button
         if (isChecked) {
@@ -3147,7 +3197,7 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
       Qt::Edge edge = isLeftToRight ? Qt::LeftEdge : Qt::RightEdge;
       Ph::paintBorderedRoundRect(
           painter, Ph::expandRect(upDownRect, Ph::oppositeEdge(edge), -1),
-          rounding, swatch, S_none, S_spinbox_base);
+          rounding, swatch, S_none, S_frame_outline_base);
 
       painter->restore(); // 0
       if (Ph::OverhangShadows && !hasFocus && isEnabled) {
@@ -3165,11 +3215,11 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
       }
       if ((spinBox->stepEnabled & QAbstractSpinBox::StepUpEnabled) &&
           upIsActive && sunken) {
-        painter->fillRect(upRect, swatch.color(S_button_pressed));
+          painter->fillRect(upRect, swatch.color(S_frame_outline));
       }
       if ((spinBox->stepEnabled & QAbstractSpinBox::StepDownEnabled) &&
           downIsActive && sunken) {
-        painter->fillRect(downRect, swatch.color(S_button_pressed));
+        painter->fillRect(downRect, swatch.color(S_frame_outline));
       }
       // Left or right border line
       Ph::fillRectEdges(painter, upDownRect, edge, 1,
@@ -3177,10 +3227,10 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
 
       Ph::PSave save(painter);
       // Outline over entire frame
-     /* Swatchy outlineColor = hasFocus ? S_highlight_outline : S_none;
+      Swatchy outlineColor = hasFocus ? S_frame_outline : S_frame_outline_base;
       Ph::paintBorderedRoundRect(painter, rect, rounding, swatch, outlineColor,
                                  S_spinbox_base);
-      */save.restore();
+      save.restore();
     }
 
     if (spinBox->buttonSymbols == QAbstractSpinBox::PlusMinus) {
@@ -3811,7 +3861,7 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
           br.setRight(fr.left() - 1);
         }
         Qt::Edge edge = isLeftToRight ? Qt::LeftEdge : Qt::RightEdge;
-        Swatchy color = hasFocus ? S_highlight_outline : S_window_outline;
+        Swatchy color = hasFocus ? S_frame_outline : S_frame_outline_base ;
         br.adjust(0, 1, 0, -1);
         Ph::fillRectEdges(painter, br, edge, 1, swatch.color(color));
         br.adjust(1, 0, -1, 0);
@@ -3866,7 +3916,7 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
     Swatchy outlineColor = S_window_outline;
     if (option->state & State_HasFocus &&
         option->state & State_KeyboardFocusChange)
-      outlineColor = S_highlight_outline;
+      outlineColor = S_frame_outline;
     if ((option->subControls & SC_SliderGroove) && groove.isValid()) {
       QRect g0 = groove;
       if (g0.height() > 5)
@@ -3946,7 +3996,7 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
       Swatchy handleOutline, handleFill, handleSpecular;
       if (option->state & State_HasFocus &&
           option->state & State_KeyboardFocusChange) {
-        handleOutline = S_highlight_outline;
+        handleOutline = S_frame_outline ;
       } else {
         handleOutline = S_window_outline;
       }
