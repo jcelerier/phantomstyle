@@ -1027,7 +1027,7 @@ Q_NEVER_INLINE void drawArrow(QPainter* p, QRect rect,
   }
   else
   {
-    p->setPen(QPen{brush.color(), 1.2});
+    p->setPen(QPen{brush.color(), 1.4});
     p->setBrush(Qt::NoBrush);
     if (!oldAA) {
       p->setRenderHint(QPainter::Antialiasing);
@@ -1828,7 +1828,7 @@ void PhantomStyle::drawPrimitive(PrimitiveElement elem,
       qreal dimx = rw * insetScale * Ph::CheckMark_WidthOfHeightScale;
       qreal dimy = rh * insetScale;
       QRectF r_(rx + (rw - dimx) / 2, ry + (rh - dimy) / 2, dimx, dimy);
-    //  Ph::drawCheck(painter, d->checkBox_pen_scratch, r_, swatch, fgColor);
+    //  Ph::(painter, d->checkBox_pen_scratch, r_, swatch, fgColor);
       Ph::drawCross(painter, d->checkBox_pen_scratch, r_, swatch, fgColor);
     }
     break;
@@ -2187,6 +2187,7 @@ void PhantomStyle::drawControl(ControlElement element,
                              iconRect.size(), editRect);
       if (cb->editable)
         painter->fillRect(iconRect, cb->palette.brush(QPalette::Base));
+
       proxy()->drawItemPixmap(painter, iconRect, Qt::AlignCenter, pixmap);
 
       if (cb->direction == Qt::RightToLeft)
@@ -2689,12 +2690,10 @@ void PhantomStyle::drawControl(ControlElement element,
     bool isSunken = menuItem->state & State_Sunken;
     bool isEnabled = menuItem->state & State_Enabled;
     bool hasSubMenu = menuItem->menuItemType == QStyleOptionMenuItem::SubMenu;
-    if (isSelected) {
-    //  Swatchy fillColor = isSunken ? S_highlight_outline : S_indicator_current;
-    //  painter->fillRect(option->rect, swatch.color(fillColor));
-   //   Swatchy outlineColor = isSunken ? S_frame_outline_base : S_none;
-   //   Ph::paintBorderedRoundRect(painter, option->rect, 0, swatch, S_none, S_frame_outline_base);
-    }
+    /*if (isSelected) {
+     Swatchy fillColor = isSunken ? S_highlight_outline : S_indicator_current;
+      painter->fillRect(option->rect, swatch.color(fillColor));
+    }*/
 
     if (isCheckable) {
       // Note: check rect might be misaligned vertically if it's a menu from a
@@ -2882,19 +2881,20 @@ void PhantomStyle::drawControl(ControlElement element,
   case CE_MenuHMargin:
   case CE_MenuVMargin:
   case CE_MenuEmptyArea:
-    break;
+      break;
   case CE_PushButton: {
     auto btn = qstyleoption_cast<const QStyleOptionButton*>(option);
     if (!btn)
       break;
 
+    bool hasFocus = btn->state & State_HasFocus;
     bool isSunken = btn->state & State_Sunken;
     bool isOn = btn->state & State_On;
 
   //  proxy()->drawControl(CE_PushButtonBevel, btn, painter, widget);
     const qreal rounding = Ph::PushButton_Rounding;
-    Swatchy borderColor = isSunken ? S_frame_outline: isOn ? S_frame_outline_base_lighter : S_frame_outline_base;
-    Swatchy fillColor = isSunken ? S_frame_outline_base: S_none;
+    Swatchy borderColor = isSunken ? S_frame_outline: isOn || hasFocus ? S_frame_outline_base_lighter : S_frame_outline_base;
+    Swatchy fillColor = isSunken ? S_frame_outline_base: S_button;
     Ph::paintBorderedRoundRect(painter, btn->rect, rounding, swatch,
                                borderColor, fillColor);
 
@@ -3301,10 +3301,10 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
     } else if (spinBox->buttonSymbols == QAbstractSpinBox::UpDownArrows) {
       int xoffs = isLeftToRight ? 0 : 1;
       Ph::drawLineArrow(painter, upRect.adjusted(4 + xoffs, 1, -5 + xoffs, 1),
-                    Qt::UpArrow, swatch, upIsActive && hasFocus ? S_frame_outline : S_text,
+                    Qt::UpArrow, swatch, upIsActive && hasFocus ? S_frame_outline : S_button,
                     spinBox->stepEnabled & QAbstractSpinBox::StepUpEnabled);
       Ph::drawLineArrow(painter, downRect.adjusted(4 + xoffs, 0, -5 + xoffs, -1),
-                    Qt::DownArrow, swatch, downIsActive && hasFocus ? S_frame_outline : S_text,
+                    Qt::DownArrow, swatch, downIsActive && hasFocus ? S_frame_outline : S_button,
                     spinBox->stepEnabled & QAbstractSpinBox::StepDownEnabled);
     }
     break;
