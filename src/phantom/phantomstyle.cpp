@@ -99,7 +99,7 @@ enum {
 
 static const qreal TabBarTab_Rounding = 0.0;
 static const qreal SpinBox_Rounding = 2.0;
-static const qreal LineEdit_Rounding = 2.0;
+static const qreal LineEdit_Rounding = 1.0;
 static const qreal FrameFocusRect_Rounding = 1.0;
 static const qreal PushButton_Rounding = 2.0;
 static const qreal ToolButton_Rounding = 1.25;
@@ -286,6 +286,7 @@ enum SwatchColor {
   S_scrollbarGutter_disabled,
   S_frame_outline,
   S_frame_outline_base,
+  S_frame_outline_base_lighter,
   S_spinbox_base,
 
   // Aliases
@@ -346,8 +347,8 @@ Q_NEVER_INLINE void PhSwatch::loadFromQPalette(const QPalette& pal) {
 
   colors[S_window] = pal.color(QPalette::Window);
   colors[S_button] = pal.color(QPalette::Button);
-  if (colors[S_button] == colors[S_window])
-    colors[S_button] = Dc::adjustLightness(colors[S_button], 0.01);
+  //if (colors[S_button] == colors[S_window])
+  //  colors[S_button] = Dc::adjustLightness(colors[S_button], 0.01);
   colors[S_base] = pal.color(QPalette::Base);
   colors[S_text] = pal.color(QPalette::Text);
   colors[S_windowText] = pal.color(QPalette::WindowText);
@@ -385,6 +386,7 @@ Q_NEVER_INLINE void PhSwatch::loadFromQPalette(const QPalette& pal) {
   colors[S_scrollbarGutter_disabled] = colors[S_window];
   colors[S_frame_outline] = pal.color(QPalette::Light);
   colors[S_frame_outline_base] = pal.color(QPalette::Midlight);
+  colors[S_frame_outline_base_lighter] = Dc::adjustLightness(colors[S_frame_outline_base], 0.2);
   colors[S_spinbox_base] = pal.color(QPalette::Mid);
 
   brushes[S_none] = Qt::NoBrush;
@@ -960,8 +962,8 @@ int fontMetricsWidth(const QFontMetrics& fontMetrics, const QString& text) {
 // Expected time (release): 5usecs for regular-sized arrows
 Q_NEVER_INLINE void drawArrow(QPainter* p, QRect rect,
                               Qt::ArrowType arrowDirection,
-                              const QBrush& brush) {
-  const qreal ArrowBaseRatio = 0.70;
+                              const QBrush& brush, bool fill = true) {
+  const qreal ArrowBaseRatio = fill ? 0.70 : 0.60;
   qreal irx, iry, irw, irh;
   QRectF(rect).getRect(&irx, &iry, &irw, &irh);
   if (irw < 1.0 || irh < 1.0)
@@ -986,41 +988,56 @@ Q_NEVER_INLINE void drawArrow(QPainter* p, QRect rect,
   case Qt::DownArrow:
     arrowRect.setTop(std::round(arrowRect.top()));
     points[0] = arrowRect.topLeft();
-    points[1] = arrowRect.topRight();
-    points[2] = QPointF(arrowRect.center().x(), arrowRect.bottom());
+    points[1] = QPointF(arrowRect.center().x(), arrowRect.bottom());
+    points[2] = arrowRect.topRight();
     break;
   case Qt::RightArrow: {
     arrowRect.setLeft(std::round(arrowRect.left()));
     points[0] = arrowRect.topLeft();
-    points[1] = arrowRect.bottomLeft();
-    points[2] = QPointF(arrowRect.right(), arrowRect.center().y());
+    points[1] = QPointF(arrowRect.right(), arrowRect.center().y());
+    points[2] = arrowRect.bottomLeft();
     break;
   }
   case Qt::LeftArrow:
     arrowRect.setRight(std::round(arrowRect.right()));
     points[0] = arrowRect.topRight();
-    points[1] = arrowRect.bottomRight();
-    points[2] = QPointF(arrowRect.left(), arrowRect.center().y());
+    points[1] = QPointF(arrowRect.left(), arrowRect.center().y());
+    points[2] = arrowRect.bottomRight();
     break;
   case Qt::UpArrow:
   default:
     arrowRect.setBottom(std::round(arrowRect.bottom()));
     points[0] = arrowRect.bottomLeft();
-    points[1] = arrowRect.bottomRight();
-    points[2] = QPointF(arrowRect.center().x(), arrowRect.top());
+    points[1] = QPointF(arrowRect.center().x(), arrowRect.top());
+    points[2] = arrowRect.bottomRight();
     break;
   }
+
   auto oldPen = p->pen();
   auto oldBrush = p->brush();
   bool oldAA = p->testRenderHint(QPainter::Antialiasing);
-  p->setPen(Qt::NoPen);
-  p->setBrush(brush);
-  if (!oldAA) {
-    p->setRenderHint(QPainter::Antialiasing);
+  if(fill)
+  {
+    p->setPen(Qt::NoPen);
+    p->setBrush(brush);
+    if (!oldAA) {
+      p->setRenderHint(QPainter::Antialiasing);
+    }
+    p->drawConvexPolygon(points, 3);
   }
-  p->drawConvexPolygon(points, 3);
+  else
+  {
+    p->setPen(QPen{brush.color(), 1.2});
+    p->setBrush(Qt::NoBrush);
+    if (!oldAA) {
+      p->setRenderHint(QPainter::Antialiasing);
+    }
+    p->drawPolyline(points, 3);
+  }
+
   p->setPen(oldPen);
   p->setBrush(oldBrush);
+
   if (!oldAA) {
     p->setRenderHint(QPainter::Antialiasing, false);
   }
@@ -1039,9 +1056,18 @@ Q_NEVER_INLINE void drawArrow(QPainter* painter, QRect rect, Qt::ArrowType type,
   using namespace SwatchColors;
   Phantom::drawArrow(
       painter, rect, type,
-      swatch.brush(allowEnabled ? S_frame_outline_base : S_indicator_disabled )); //S_indicator_current : S_indicator_disabled));
+      swatch.brush(allowEnabled ? S_indicator_current : S_indicator_disabled));
 }
-
+Q_NEVER_INLINE void drawLineArrow(QPainter* painter, QRect rect, Qt::ArrowType type,
+                              const PhSwatch& swatch,
+                              Swatchy color,bool allowEnabled = true) {
+  if (rect.isEmpty())
+    return;
+  using namespace SwatchColors;
+  Phantom::drawArrow(
+      painter, rect, type,
+      swatch.brush(allowEnabled ? color : S_indicator_disabled), false);
+}
 // This draws exactly within the rect provided. If you provide a square rect,
 // it will appear too wide -- you probably want to shrink the width of your
 // square first by multiplying it with CheckMark_WidthOfHeightScale.
@@ -2857,7 +2883,17 @@ void PhantomStyle::drawControl(ControlElement element,
     auto btn = qstyleoption_cast<const QStyleOptionButton*>(option);
     if (!btn)
       break;
-    proxy()->drawControl(CE_PushButtonBevel, btn, painter, widget);
+
+    bool isSunken = btn->state & State_Sunken;
+    bool isOn = btn->state & State_On;
+
+  //  proxy()->drawControl(CE_PushButtonBevel, btn, painter, widget);
+    const qreal rounding = Ph::PushButton_Rounding;
+    Swatchy borderColor = isSunken ? S_frame_outline: isOn ? S_frame_outline_base_lighter : S_frame_outline_base;
+    Swatchy fillColor = isSunken ? S_frame_outline_base: S_none;
+    Ph::paintBorderedRoundRect(painter, btn->rect, rounding, swatch,
+                               borderColor, fillColor);
+
     QStyleOptionButton subopt = *btn;
     subopt.rect = subElementRect(SE_PushButtonContents, btn, widget);
     proxy()->drawControl(CE_PushButtonLabel, &subopt, painter, widget);
@@ -2912,10 +2948,11 @@ void PhantomStyle::drawControl(ControlElement element,
     } else {
       tf |= Qt::AlignHCenter;
     }
-    if (button->state & (State_On | State_Sunken))
+   /* if (button->state & (State_On | State_Sunken))
       textRect.translate(
           proxy()->pixelMetric(PM_ButtonShiftHorizontal, option, widget),
           proxy()->pixelMetric(PM_ButtonShiftVertical, option, widget));
+   */
     if (button->features & QStyleOptionButton::HasMenu) {
       int indicatorSize =
           proxy()->pixelMetric(PM_MenuButtonIndicator, button, widget);
@@ -2924,9 +2961,12 @@ void PhantomStyle::drawControl(ControlElement element,
       else
         textRect = textRect.adjusted(indicatorSize, 0, 0, 0);
     }
+
+    bool isSunken = button->state & State_Sunken | button->state & State_On;
+
     proxy()->drawItemText(painter, textRect, tf, button->palette,
                           (button->state & State_Enabled), button->text,
-                          QPalette::ButtonText);
+                          isSunken ? QPalette::Light : QPalette::ButtonText);
     break;
   }
   case CE_MenuBarEmptyArea: {
@@ -3184,15 +3224,16 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
         proxy()->subControlRect(CC_SpinBox, spinBox, SC_SpinBoxUp, widget);
     QRect downRect =
         proxy()->subControlRect(CC_SpinBox, spinBox, SC_SpinBoxDown, widget);
-    if (spinBox->frame) {
+   if (spinBox->frame) {
       QRect upDownRect = upRect | downRect;
       upDownRect.adjust(0, -1, 0, 1);
       painter->save(); // 0
       // Fill background
-      Ph::paintBorderedRoundRect(painter, rect, rounding, swatch, S_none,
-                                 S_spinbox_base);
+      Ph::paintBorderedRoundRect(painter, rect, rounding, swatch,
+                                 hasFocus || sunken ? S_frame_outline : S_frame_outline_base,
+                                  S_frame_outline_base);//S_spinbox_base);
       // Draw button fill
-      painter->setClipRect(upDownRect);
+   /*   painter->setClipRect(upDownRect);
       // Side with the border
       Qt::Edge edge = isLeftToRight ? Qt::LeftEdge : Qt::RightEdge;
       Ph::paintBorderedRoundRect(
@@ -3213,7 +3254,7 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
         Ph::fillRectEdges(painter, shadowRect, Qt::TopEdge, 1,
                           swatch.color(S_spinbox_base));
       }
-      if ((spinBox->stepEnabled & QAbstractSpinBox::StepUpEnabled) &&
+     if ((spinBox->stepEnabled & QAbstractSpinBox::StepUpEnabled) &&
           upIsActive && sunken) {
           painter->fillRect(upRect, swatch.color(S_frame_outline));
       }
@@ -3230,7 +3271,7 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
       Swatchy outlineColor = hasFocus ? S_frame_outline : S_frame_outline_base;
       Ph::paintBorderedRoundRect(painter, rect, rounding, swatch, outlineColor,
                                  S_spinbox_base);
-      save.restore();
+      save.restore();*/
     }
 
     if (spinBox->buttonSymbols == QAbstractSpinBox::PlusMinus) {
@@ -3255,11 +3296,11 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
       painter->drawLine(centerX - 1, centerY, centerX + 3, centerY);
     } else if (spinBox->buttonSymbols == QAbstractSpinBox::UpDownArrows) {
       int xoffs = isLeftToRight ? 0 : 1;
-      Ph::drawArrow(painter, upRect.adjusted(4 + xoffs, 1, -5 + xoffs, 1),
-                    Qt::UpArrow, swatch,
+      Ph::drawLineArrow(painter, upRect.adjusted(4 + xoffs, 1, -5 + xoffs, 1),
+                    Qt::UpArrow, swatch, upIsActive && hasFocus ? S_frame_outline : S_text,
                     spinBox->stepEnabled & QAbstractSpinBox::StepUpEnabled);
-      Ph::drawArrow(painter, downRect.adjusted(4 + xoffs, 0, -5 + xoffs, -1),
-                    Qt::DownArrow, swatch,
+      Ph::drawLineArrow(painter, downRect.adjusted(4 + xoffs, 0, -5 + xoffs, -1),
+                    Qt::DownArrow, swatch, downIsActive && hasFocus ? S_frame_outline : S_text,
                     spinBox->stepEnabled & QAbstractSpinBox::StepDownEnabled);
     }
     break;
