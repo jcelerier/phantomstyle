@@ -2016,26 +2016,21 @@ void PhantomStyle::drawPrimitive(PrimitiveElement elem,
     Q_UNUSED(isEnabled);
     bool hasFocus = (option->state & State_HasFocus &&
                      option->state & State_KeyboardFocusChange);
-    const qreal rounding = Ph::PushButton_Rounding;
-    Swatchy outline = S_window_outline;
+    const qreal rounding = Ph::LineEdit_Rounding;
+    Swatchy outline = S_frame_outline_base;
     Swatchy fill = S_button;
-    Swatchy specular = S_button_specular;
     if (isDown) {
       fill = S_button_pressed;
-      specular = S_button_pressed_specular;
     } else if (isOn) {
       // kinda repurposing this, hmm
       fill = S_scrollbarGutter;
-      specular = S_button_pressed_specular;
     }
-    if (hasFocus || isDefault) {
+    if (hasFocus|| isDefault) {
       outline = S_frame_outline ;
     }
     QRect r = option->rect;
     Ph::PSave save(painter);
     Ph::paintBorderedRoundRect(painter, r, rounding, swatch, outline, fill);
-    Ph::paintBorderedRoundRect(painter, r.adjusted(1, 1, -1, -1), rounding,
-                               swatch, specular, S_none);
     break;
   }
   case PE_FrameTabWidget: {
@@ -2695,9 +2690,10 @@ void PhantomStyle::drawControl(ControlElement element,
     bool isEnabled = menuItem->state & State_Enabled;
     bool hasSubMenu = menuItem->menuItemType == QStyleOptionMenuItem::SubMenu;
     if (isSelected) {
-      Swatchy fillColor = isSunken ? S_highlight_outline : S_indicator_current;
-      painter->fillRect(option->rect, swatch.color(fillColor));
-      //Ph::paintBorderedRoundRect(painter, option->rect, 0, swatch, S_frame_outline_base, S_none);
+    //  Swatchy fillColor = isSunken ? S_highlight_outline : S_indicator_current;
+    //  painter->fillRect(option->rect, swatch.color(fillColor));
+   //   Swatchy outlineColor = isSunken ? S_frame_outline_base : S_none;
+   //   Ph::paintBorderedRoundRect(painter, option->rect, 0, swatch, S_none, S_frame_outline_base);
     }
 
     if (isCheckable) {
@@ -2707,18 +2703,26 @@ void PhantomStyle::drawControl(ControlElement element,
                                               itemRect, hasSubMenu);
       Swatchy signColor = !isEnabled
                               ? S_windowText
-                              : isSelected ? S_frame_outline_base : S_windowText;
+                              : isSelected ? S_frame_outline : S_windowText;
       if (menuItem->checkType & QStyleOptionMenuItem::Exclusive) {
         // Radio button
         if (isChecked) {
           painter->setRenderHint(QPainter::Antialiasing);
           painter->setPen(Qt::NoPen);
-          QPalette::ColorRole textRole =
-              !isEnabled ? QPalette::Text
-                         : isSelected ? QPalette::HighlightedText
-                                      : QPalette::ButtonText;
-          painter->setBrush(option->palette.brush(
-              option->palette.currentColorGroup(), textRole));
+          if(isSelected)
+          {
+            painter->setBrush(swatch.color(S_frame_outline));
+          }
+          else
+          {
+            QPalette::ColorRole textRole =
+                !isEnabled ? QPalette::Text
+                           : isSelected ? QPalette::HighlightedText
+                                        : QPalette::ButtonText;
+            painter->setBrush(option->palette.brush(
+                option->palette.currentColorGroup(), textRole));
+          }
+
           qreal rx, ry, rw, rh;
           QRectF(checkRect).getRect(&rx, &ry, &rw, &rh);
           qreal dim = (qreal)qMin(checkRect.width(), checkRect.height()) * 0.75;
@@ -2783,7 +2787,7 @@ void PhantomStyle::drawControl(ControlElement element,
         text_flags |= Qt::TextHideMnemonic;
 
       Swatchy text_color = !isEnabled ? S_indicator_disabled
-                                      :isSelected ? S_highlightedText : S_text;
+                                      :isSelected ? S_frame_outline : S_text;
 
       painter->setPen(swatch.pen(text_color));
 
@@ -2868,7 +2872,7 @@ void PhantomStyle::drawControl(ControlElement element,
           option->direction == Qt::RightToLeft ? Qt::LeftArrow : Qt::RightArrow;
       QRect arrowRect =
           Ph::menuItemArrowRect(metrics, option->direction, itemRect);
-      Swatchy arrowColor = isSelected ? S_highlightedText : S_indicator_current;
+      Swatchy arrowColor = isSelected ? S_frame_outline : S_indicator_current;
       Ph::drawArrow(painter, arrowRect, arrow, swatch.brush(arrowColor));
     }
     painter->restore();
@@ -3867,8 +3871,8 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
       break;
     painter->save();
     bool isLeftToRight = option->direction != Qt::RightToLeft;
-    bool hasFocus = option->state & State_HasFocus &&
-                    option->state & State_KeyboardFocusChange;
+    bool hasFocus = option->state & State_HasFocus;// &&
+                   // option->state & State_KeyboardFocusChange;
     bool isSunken = comboBox->state & State_Sunken;
     QRect rect = comboBox->rect;
     QRect downArrowRect = proxy()->subControlRect(CC_ComboBox, comboBox,
@@ -3937,7 +3941,7 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
       QRect r = downArrowRect;
       r.adjust(margin, margin, -margin, -margin);
       // Draw the up/down arrow
-      Ph::drawArrow(painter, r, Qt::DownArrow, swatch);
+      Ph::drawLineArrow(painter, r, Qt::DownArrow, swatch, hasFocus || isSunken? S_frame_outline : S_frame_outline_base);
     }
     painter->restore();
     break;
