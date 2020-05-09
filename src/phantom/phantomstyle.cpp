@@ -1060,13 +1060,13 @@ Q_NEVER_INLINE void drawArrow(QPainter* painter, QRect rect, Qt::ArrowType type,
 }
 Q_NEVER_INLINE void drawLineArrow(QPainter* painter, QRect rect, Qt::ArrowType type,
                               const PhSwatch& swatch,
-                              Swatchy color,bool allowEnabled = true) {
+                              Swatchy active_color, Swatchy disabled_color, bool allowEnabled = true) {
   if (rect.isEmpty())
     return;
   using namespace SwatchColors;
   Phantom::drawArrow(
       painter, rect, type,
-      swatch.brush(allowEnabled ? color : S_indicator_disabled), false);
+      swatch.brush(allowEnabled ? active_color : disabled_color), false);
 }
 // This draws exactly within the rect provided. If you provide a square rect,
 // it will appear too wide -- you probably want to shrink the width of your
@@ -2690,10 +2690,10 @@ void PhantomStyle::drawControl(ControlElement element,
     bool isSunken = menuItem->state & State_Sunken;
     bool isEnabled = menuItem->state & State_Enabled;
     bool hasSubMenu = menuItem->menuItemType == QStyleOptionMenuItem::SubMenu;
-    /*if (isSelected) {
-     Swatchy fillColor = isSunken ? S_highlight_outline : S_indicator_current;
+    if (isSelected) {
+     Swatchy fillColor = S_highlight;
       painter->fillRect(option->rect, swatch.color(fillColor));
-    }*/
+    }
 
     if (isCheckable) {
       // Note: check rect might be misaligned vertically if it's a menu from a
@@ -2786,7 +2786,7 @@ void PhantomStyle::drawControl(ControlElement element,
         text_flags |= Qt::TextHideMnemonic;
 
       Swatchy text_color = !isEnabled ? S_indicator_disabled
-                                      :isSelected ? S_frame_outline : S_text;
+                                      :isSelected ? S_highlightedText : S_text;
 
       painter->setPen(swatch.pen(text_color));
 
@@ -3301,11 +3301,15 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
     } else if (spinBox->buttonSymbols == QAbstractSpinBox::UpDownArrows) {
       int xoffs = isLeftToRight ? 0 : 1;
       Ph::drawLineArrow(painter, upRect.adjusted(4 + xoffs, 1, -5 + xoffs, 1),
-                    Qt::UpArrow, swatch, upIsActive && hasFocus ? S_frame_outline : S_button,
-                    spinBox->stepEnabled & QAbstractSpinBox::StepUpEnabled);
+                        Qt::UpArrow, swatch,
+                        upIsActive && hasFocus ? S_highlightedText : hasFocus ?  S_frame_outline: S_indicator_current,
+                        S_base,
+                        spinBox->stepEnabled & QAbstractSpinBox::StepUpEnabled);
       Ph::drawLineArrow(painter, downRect.adjusted(4 + xoffs, 0, -5 + xoffs, -1),
-                    Qt::DownArrow, swatch, downIsActive && hasFocus ? S_frame_outline : S_button,
-                    spinBox->stepEnabled & QAbstractSpinBox::StepDownEnabled);
+                    Qt::DownArrow, swatch,
+                        downIsActive && hasFocus ? S_highlightedText : hasFocus ? S_frame_outline : S_indicator_current,
+                        S_base,
+                        spinBox->stepEnabled & QAbstractSpinBox::StepDownEnabled);
     }
     break;
   }
@@ -3941,7 +3945,8 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
       QRect r = downArrowRect;
       r.adjust(margin, margin, -margin, -margin);
       // Draw the up/down arrow
-      Ph::drawLineArrow(painter, r, Qt::DownArrow, swatch, hasFocus || isSunken? S_frame_outline : S_frame_outline_base);
+      Ph::drawLineArrow(painter, r, Qt::DownArrow, swatch,
+                        hasFocus || isSunken? S_frame_outline : S_frame_outline_base, S_indicator_disabled);
     }
     painter->restore();
     break;
