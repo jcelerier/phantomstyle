@@ -107,7 +107,7 @@ static const qreal GroupBox_Rounding = 0.0;
 static const qreal SliderGroove_Rounding = 2.0;
 static const qreal SliderHandle_Rounding = 0.0;
 
-static const qreal CheckMark_WidthOfHeightScale = 0.8;
+static const qreal CheckMark_WidthOfHeightScale = 0.7/0.8;
 static const qreal PushButton_HorizontalPaddingFontHeightRatio = 1.0 / 2.0;
 static const qreal TabBar_HPaddingFontRatio = 1.25;
 static const qreal TabBar_VPaddingFontRatio = 1.0 / 1.25;
@@ -1782,6 +1782,7 @@ void PhantomStyle::drawPrimitive(PrimitiveElement elem,
     if (!checkbox)
       break;
     QRect r = option->rect;
+
     bool isHighlighted = option->state & State_HasFocus &&
                          option->state & State_KeyboardFocusChange;
     bool isSelected = option->state & State_Selected;
@@ -4058,7 +4059,7 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
       }
       Ph::PSave save(painter);
       Ph::paintBorderedRoundRect(painter, r, Ph::SliderHandle_Rounding, swatch,
-                                 handleOutline, handleFill);
+                                 S_frame_outline, handleFill);
       r.adjust(1, 1, -1, -1);
       Ph::paintBorderedRoundRect(painter, r, Ph::SliderHandle_Rounding, swatch,
                                  handleSpecular, S_none);
@@ -4258,6 +4259,8 @@ int PhantomStyle::pixelMetric(PixelMetric metric, const QStyleOption* option,
     break;
   case PM_IndicatorHeight:
   case PM_IndicatorWidth:
+      val = 12;
+      break;
   case PM_ExclusiveIndicatorHeight:
   case PM_ExclusiveIndicatorWidth:
     if (option)
