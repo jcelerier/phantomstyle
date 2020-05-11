@@ -379,7 +379,7 @@ Q_NEVER_INLINE void PhSwatch::loadFromQPalette(const QPalette& pal) {
   colors[S_inactiveTabNoFrame_specular] =
       Dc::specularOf(colors[S_inactiveTabNoFrame]);
   colors[S_indicator_current] = Dc::indicatorColorOf(pal, QPalette::Current);
-  colors[S_indicator_disabled] = Dc::indicatorColorOf(pal, QPalette::Disabled);
+  colors[S_indicator_disabled] =  Dc::adjustLightness(colors[S_base], 0.35);
   colors[S_itemView_multiSelection_currentBorder] =
       Dc::itemViewMultiSelectionCurrentBorderOf(pal);
   colors[S_itemView_headerOnLine] = Dc::itemViewHeaderOnLineColorOf(pal);
@@ -1748,7 +1748,7 @@ void PhantomStyle::drawPrimitive(PrimitiveElement elem,
     bool hasFocus = option->state & State_HasFocus;
     bool isEnabled = option->state & State_Enabled;
     const qreal rounding = Ph::LineEdit_Rounding;
-    auto pen = hasFocus ? S_frame_outline : S_frame_outline_base;
+    auto pen = !isEnabled ? S_indicator_disabled: hasFocus ? S_frame_outline : S_frame_outline_base;
     Ph::PSave save(painter);
     Ph::paintBorderedRoundRect(painter, r, rounding, swatch, pen, S_none);
     save.restore();
@@ -1790,8 +1790,8 @@ void PhantomStyle::drawPrimitive(PrimitiveElement elem,
     bool isFlat = checkbox->features & QStyleOptionButton::Flat;
     bool isEnabled = option->state & State_Enabled;
     bool isPressed = state & State_Sunken;
-    Swatchy outlineColor =
-        isHighlighted || isPressed? S_frame_outline : S_frame_outline_base;
+    Swatchy outlineColor =!isEnabled ? S_indicator_disabled
+        : isHighlighted || isPressed? S_frame_outline : S_frame_outline_base;
     Swatchy bgFillColor = isPressed ? S_frame_outline_base : S_base;
     Swatchy fgColor = S_frame_outline;
     if (isPressed){// && !isFlat) {
@@ -2018,7 +2018,7 @@ void PhantomStyle::drawPrimitive(PrimitiveElement elem,
     bool hasFocus = (option->state & State_HasFocus &&
                      option->state & State_KeyboardFocusChange);
     const qreal rounding = Ph::LineEdit_Rounding;
-    Swatchy outline = S_frame_outline_base;
+    Swatchy outline = isEnabled ? S_frame_outline_base : S_indicator_disabled;
     Swatchy fill = S_button;
     if (isDown) {
       fill = S_button_pressed;
@@ -2889,12 +2889,17 @@ void PhantomStyle::drawControl(ControlElement element,
       break;
 
     bool hasFocus = btn->state & State_HasFocus;
+    bool isEnabled = btn->state & State_Enabled;
     bool isSunken = btn->state & State_Sunken;
     bool isOn = btn->state & State_On;
 
   //  proxy()->drawControl(CE_PushButtonBevel, btn, painter, widget);
     const qreal rounding = Ph::PushButton_Rounding;
-    Swatchy borderColor = isSunken ? S_frame_outline: isOn || hasFocus ? S_frame_outline_base_lighter : S_frame_outline_base;
+    Swatchy borderColor = !isEnabled ?
+          S_indicator_disabled
+        : isSunken ?
+            S_frame_outline
+          : isOn || hasFocus ? S_frame_outline_base_lighter : S_frame_outline_base;
     Swatchy fillColor = isSunken ? S_frame_outline_base: S_button;
     Ph::paintBorderedRoundRect(painter, btn->rect, rounding, swatch,
                                borderColor, fillColor);
@@ -3235,8 +3240,9 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
       painter->save(); // 0
       // Fill background
       Ph::paintBorderedRoundRect(painter, rect, rounding, swatch,
-                                 hasFocus || sunken ? S_frame_outline : S_frame_outline_base,
-                                  S_frame_outline_base);//S_spinbox_base);
+                                 !isEnabled ? S_indicator_disabled :
+                                              hasFocus || sunken ? S_frame_outline : S_frame_outline_base,
+                                   !isEnabled ? S_indicator_disabled : hasFocus || sunken ? S_frame_outline : S_frame_outline_base);
       // Draw button fill
    /*   painter->setClipRect(upDownRect);
       // Side with the border
@@ -3303,13 +3309,13 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
       int xoffs = isLeftToRight ? 0 : 1;
       Ph::drawLineArrow(painter, upRect.adjusted(4 + xoffs, 1, -5 + xoffs, 1),
                         Qt::UpArrow, swatch,
-                        upIsActive && hasFocus ? S_highlightedText : hasFocus ?  S_frame_outline: S_indicator_current,
-                        S_base,
+                        upIsActive && hasFocus ? S_highlightedText : S_base,
+                        S_indicator_disabled,
                         spinBox->stepEnabled & QAbstractSpinBox::StepUpEnabled);
       Ph::drawLineArrow(painter, downRect.adjusted(4 + xoffs, 0, -5 + xoffs, -1),
                     Qt::DownArrow, swatch,
-                        downIsActive && hasFocus ? S_highlightedText : hasFocus ? S_frame_outline : S_indicator_current,
-                        S_base,
+                        downIsActive && hasFocus ? S_highlightedText : S_base,
+                        S_indicator_disabled,
                         spinBox->stepEnabled & QAbstractSpinBox::StepDownEnabled);
     }
     break;
@@ -3876,6 +3882,7 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
       break;
     painter->save();
     bool isLeftToRight = option->direction != Qt::RightToLeft;
+    bool isEnabled = option->state & State_Enabled;
     bool hasFocus = option->state & State_HasFocus;// &&
                    // option->state & State_KeyboardFocusChange;
     bool isSunken = comboBox->state & State_Sunken;
@@ -3911,7 +3918,7 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
           br.setRight(fr.left() - 1);
         }
         Qt::Edge edge = isLeftToRight ? Qt::LeftEdge : Qt::RightEdge;
-        Swatchy color = hasFocus ? S_frame_outline : S_frame_outline_base ;
+        Swatchy color = !isEnabled ? S_indicator_disabled : hasFocus ? S_frame_outline : S_frame_outline_base ;
         br.adjust(0, 1, 0, -1);
         Ph::fillRectEdges(painter, br, edge, 1, swatch.color(color));
         br.adjust(1, 0, -1, 0);
@@ -3947,7 +3954,8 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
       r.adjust(margin, margin, -margin, -margin);
       // Draw the up/down arrow
       Ph::drawLineArrow(painter, r, Qt::DownArrow, swatch,
-                        hasFocus || isSunken? S_frame_outline : S_frame_outline_base, S_indicator_disabled);
+                        hasFocus || isSunken? S_frame_outline : S_frame_outline_base, S_indicator_disabled,
+                        comboBox->state & State_Enabled);
     }
     painter->restore();
     break;
