@@ -1842,7 +1842,7 @@ void PhantomStyle::drawPrimitive(PrimitiveElement elem,
     bool isSunken = state & State_Sunken;
     bool isEnabled = state & State_Enabled;
     Swatchy outlineColor =
-        isHighlighted ? S_frame_outline  : S_window_outline;
+        isHighlighted ? S_frame_outline  : S_frame_outline_base;
     Swatchy bgFillColor = isSunken ? S_frame_outline  : S_base;
     QPointF circleCenter(rx + rw / 2.0, ry + rh / 2.0);
     const qreal lineThickness = 1.0;
@@ -1864,8 +1864,8 @@ void PhantomStyle::drawPrimitive(PrimitiveElement elem,
       painter->drawPath(path2);
     }
     if (state & State_On) {
-      Swatchy fgColor = isSunken ? S_highlightedText : S_windowText;
-      qreal checkmarkRadius = outlineRadius / 2.32;
+      Swatchy fgColor = isSunken ? S_highlight : S_frame_outline;
+      qreal checkmarkRadius = outlineRadius / 2.5;
       painter->setPen(Qt::NoPen);
       painter->setBrush(swatch.brush(fgColor));
       painter->drawEllipse(circleCenter, checkmarkRadius, checkmarkRadius);
