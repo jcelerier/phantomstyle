@@ -5018,6 +5018,7 @@ int PhantomStyle::styleHint(StyleHint hint, const QStyleOption* option,
   case SH_ItemView_ChangeHighlightOnFocus:
   case SH_MenuBar_MouseTracking:
   case SH_Menu_MouseTracking:
+  case SH_ItemView_ActivateItemOnSingleClick:
     return 1;
   case SH_Menu_SupportsSections:
     return 0;
