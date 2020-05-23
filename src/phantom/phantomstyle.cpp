@@ -3743,13 +3743,13 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
     if (scrollBar->subControls & SC_ScrollBarSlider) {
       Swatchy thumbFill, thumbSpecular;
       if (isSunken && scrollBar->activeSubControls & SC_ScrollBarSlider) {
-        thumbFill = S_button_pressed;
+        thumbFill = S_frame_outline;
         thumbSpecular = S_button_pressed_specular;
       } else if (hasRange) {
-        thumbFill = S_button;
+        thumbFill = S_indicator_current;
         thumbSpecular = S_button_specular;
       } else {
-        thumbFill = S_window;
+        thumbFill = S_indicator_current;
         thumbSpecular = S_none;
       }
       Qt::Edges edges;
@@ -3771,6 +3771,7 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
       }
       Ph::fillRectEdges(painter, edgeRect, edges, 1,
                         swatch.color(S_window_outline));
+
       painter->fillRect(mainRect, swatch.color(thumbFill));
       if (thumbSpecular) {
         Ph::fillRectOutline(painter, mainRect, 1, swatch.color(thumbSpecular));
@@ -3827,7 +3828,8 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
         arrowType = Qt::UpArrow;
       }
       int adj = qMin(bgRect.width(), bgRect.height()) / 4;
-      Ph::drawArrow(painter, bgRect.adjusted(adj, adj, -adj, -adj), arrowType,
+
+       Ph::drawArrow(painter, bgRect.adjusted(adj, adj, -adj, -adj), arrowType,
                     swatch, hasRange);
     }
 
