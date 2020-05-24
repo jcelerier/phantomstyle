@@ -3250,8 +3250,10 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
       Ph::paintBorderedRoundRect(
           painter, Ph::expandRect(upDownRect, Ph::oppositeEdge(edge), -1),
           rounding, swatch, S_none, S_frame_outline_base);
+          */
 
       painter->restore(); // 0
+      /*
       if (Ph::OverhangShadows && !hasFocus && isEnabled) {
         // Imperfect, leaves tiny gap on left and right. Going closer would eat
         // into the outline, though.
@@ -3282,7 +3284,9 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
       Swatchy outlineColor = hasFocus ? S_frame_outline : S_frame_outline_base;
       Ph::paintBorderedRoundRect(painter, rect, rounding, swatch, outlineColor,
                                  S_spinbox_base);
-      save.restore();*/
+
+      save.restore();
+      */
     }
 
     if (spinBox->buttonSymbols == QAbstractSpinBox::PlusMinus) {
