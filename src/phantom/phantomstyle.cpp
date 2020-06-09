@@ -89,7 +89,7 @@ namespace Phantom {
 namespace {
 enum {
   MenuMinimumWidth = 10,  // Smallest width that menu items can have
-  SplitterMaxLength = 25, // Length of splitter handle (not thickness)
+  SplitterMaxLength = 140, // Length of splitter handle (not thickness)
   SpinBox_ButtonWidth = 14,
 
   // These two are currently not based on font, but could be
@@ -358,7 +358,7 @@ Q_NEVER_INLINE void PhSwatch::loadFromQPalette(const QPalette& pal) {
 
   colors[S_window_outline] = Dc::adjustLightness(colors[S_window], -0.1);
   colors[S_window_specular] = Dc::specularOf(colors[S_window]);
-  colors[S_window_divider] = Dc::dividerColor(colors[S_window]);
+  colors[S_window_divider] = Dc::lightShadeOf(colors[S_window]);
   colors[S_window_lighter] = Dc::lightShadeOf(colors[S_window]);
   colors[S_window_darker] = Dc::darkShadeOf(colors[S_window]);
   colors[S_button_specular] = Dc::specularOf(colors[S_button]);
@@ -2213,7 +2213,7 @@ void PhantomStyle::drawControl(ControlElement element,
     if (r.width() < 5 || r.height() < 5)
       break;
     int length = (int)Ph::dpiScaled(Ph::SplitterMaxLength);
-    int thickness = (int)Ph::dpiScaled(1);
+    int thickness = 5;//(int)Ph::dpiScaled(1);
     QSize size;
     if (option->state & State_Horizontal) {
       if (r.height() < length)
@@ -2226,8 +2226,8 @@ void PhantomStyle::drawControl(ControlElement element,
     }
     QRect filledRect =
         QStyle::alignedRect(option->direction, Qt::AlignCenter, size, r);
-    painter->fillRect(filledRect, swatch.color(S_button_specular));
-    Ph::fillRectOutline(painter, filledRect.adjusted(-1, 0, 1, 0), 1,
+    painter->fillRect(filledRect, swatch.color(S_window_divider));//S_button_specular));
+    Ph::fillRectOutline(painter, filledRect.adjusted(-1, -1, -1, -1), 1,
                         swatch.color(S_window_divider));
     break;
   }
