@@ -266,6 +266,7 @@ enum SwatchColor {
   S_window_divider,
   S_window_lighter,
   S_window_darker,
+  S_button_border,
   S_button_specular,
   S_button_pressed,
   S_button_pressed_specular,
@@ -361,6 +362,7 @@ Q_NEVER_INLINE void PhSwatch::loadFromQPalette(const QPalette& pal) {
   colors[S_window_divider] = Dc::lightShadeOf(colors[S_window]);
   colors[S_window_lighter] = Dc::lightShadeOf(colors[S_window]);
   colors[S_window_darker] = Dc::darkShadeOf(colors[S_window]);
+  colors[S_button_border] = Dc::adjustLightness(colors[S_button], 0.15);
   colors[S_button_specular] = Dc::specularOf(colors[S_button]);
   colors[S_button_pressed] = Dc::pressedOf(colors[S_button]);
   colors[S_button_pressed_specular] = Dc::specularOf(colors[S_button_pressed]);
@@ -2892,6 +2894,7 @@ void PhantomStyle::drawControl(ControlElement element,
     bool isEnabled = btn->state & State_Enabled;
     bool isSunken = btn->state & State_Sunken;
     bool isOn = btn->state & State_On;
+    bool hover = btn->state & State_MouseOver;
 
   //  proxy()->drawControl(CE_PushButtonBevel, btn, painter, widget);
     const qreal rounding = Ph::PushButton_Rounding;
@@ -2899,7 +2902,8 @@ void PhantomStyle::drawControl(ControlElement element,
           S_indicator_disabled
         : isSunken ?
             S_frame_outline
-          : isOn || hasFocus ? S_frame_outline_base_lighter : S_frame_outline_base;
+          : isOn || hasFocus ? S_frame_outline_base_lighter :
+                               hover ? S_frame_outline_base : S_button_border;
     Swatchy fillColor = isSunken ? S_frame_outline_base: S_button;
     Ph::paintBorderedRoundRect(painter, btn->rect, rounding, swatch,
                                borderColor, fillColor);
@@ -4612,6 +4616,7 @@ void PhantomStyle::polish(QApplication* app) { QCommonStyle::polish(app); }
 
 void PhantomStyle::polish(QWidget* widget) {
   QCommonStyle::polish(widget);
+   widget->setAttribute(Qt::WA_Hover, true);
   // Leaving this code here to debug/remove hover stuff if necessary
 #if 0
   if (false
