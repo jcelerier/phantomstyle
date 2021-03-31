@@ -788,7 +788,7 @@ void progressBarFillRects(
     bool& outIsIndeterminate) {
   QRect ra = bar->rect;
   QRect rb = ra;
-  bool isHorizontal = bar->orientation != Qt::Vertical;
+  bool isHorizontal = bar->state & QStyle::State_Horizontal;
   bool isInverted = bar->invertedAppearance;
   bool isIndeterminate = bar->minimum == 0 && bar->maximum == 0;
   bool isForward = !isHorizontal || bar->direction != Qt::RightToLeft;
@@ -2588,7 +2588,7 @@ void PhantomStyle::drawControl(ControlElement element,
     QRect r = bar->rect.adjusted(2, 2, -2, -2);
     if (r.isEmpty() || !r.isValid())
       break;
-    QSize textSize = option->fontMetrics.size(Qt::TextBypassShaping, bar->text);
+    QSize textSize = option->fontMetrics.boundingRect(bar->text).size();
     QRect textRect = QStyle::alignedRect(option->direction, Qt::AlignCenter,
                                          textSize, option->rect);
     textRect &= r;
@@ -2777,11 +2777,23 @@ void PhantomStyle::drawControl(ControlElement element,
     }
 
     // Draw main text and mnemonic text
-    QStringRef s(&menuItem->text);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    using ViewType = QStringRef;
+    ViewType s(&menuItem->text);
+#else
+    using ViewType = QStringView;
+    ViewType s(menuItem->text);
+#endif
+
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+      int tabWidth = menuItem->tabWidth;
+#else
+    int tabWidth = 0;
+#endif
     if (!s.isEmpty()) {
       QRect textRect =
           Ph::menuItemTextRect(metrics, option->direction, itemRect, hasSubMenu,
-                               hasIcon, menuItem->tabWidth);
+                               hasIcon, tabWidth);
       int t = s.indexOf(QLatin1Char('\t'));
       int text_flags = Qt::AlignLeft | Qt::AlignTop | Qt::TextShowMnemonic |
                        Qt::TextDontClip | Qt::TextSingleLine;
@@ -2855,14 +2867,14 @@ void PhantomStyle::drawControl(ControlElement element,
       if (t >= 0) {
         QRect mnemonicR =
             Ph::menuItemMnemonicRect(metrics, option->direction, itemRect,
-                                     hasSubMenu, menuItem->tabWidth);
-        const QStringRef textToDrawRef = s.mid(t + 1);
+                                     hasSubMenu, tabWidth);
+        const ViewType textToDrawRef = s.mid(t + 1);
         const QString unsafeTextToDraw = QString::fromRawData(
             textToDrawRef.constData(), textToDrawRef.size());
         painter->drawText(mnemonicR, text_flags, unsafeTextToDraw);
         s = s.left(t);
       }
-      const QStringRef textToDrawRef = s.left(t);
+      const ViewType textToDrawRef = s.left(t);
       const QString unsafeTextToDraw =
           QString::fromRawData(textToDrawRef.constData(), textToDrawRef.size());
       painter->drawText(textRect, text_flags, unsafeTextToDraw);
@@ -4512,8 +4524,12 @@ QSize PhantomStyle::sizeFromContents(ContentsType type,
     bool nullIcon = hdr->icon.isNull();
     int margin = proxy()->pixelMetric(QStyle::PM_HeaderMargin, hdr, widget);
     int iconSize = nullIcon ? 0 : option->fontMetrics.height();
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QSize txt = hdr->fontMetrics.size(
         Qt::TextSingleLine | Qt::TextBypassShaping, hdr->text);
+#else
+    QSize txt = hdr->fontMetrics.size(0, hdr->text);
+#endif
     QSize sz;
     sz.setHeight(margin + qMax(iconSize, txt.height()) + margin);
     sz.setWidth((nullIcon ? 0 : margin) + iconSize +
@@ -5041,7 +5057,9 @@ int PhantomStyle::styleHint(StyleHint hint, const QStyleOption* option,
   case SH_PrintDialog_RightAlignButtons:
   case SH_FontDialog_SelectAssociatedText:
   case SH_ComboBox_ListMouseTracking:
-  case SH_ScrollBar_StopMouseOverSlider:
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    case SH_ScrollBar_StopMouseOverSlider:
+#endif
   case SH_ScrollBar_MiddleClickAbsolutePosition:
   case SH_TitleBar_AutoRaise:
   case SH_TitleBar_NoBorder:
