@@ -414,6 +414,7 @@ Q_NEVER_INLINE void PhSwatch::loadFromQPalette(const QPalette& pal) {
   }
 }
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 3, 0)
 // This is the "hash" (not really a hash) function we'll use on the happy fast
 // path when looking up a PhSwatch for a given QPalette. It's fragile, because
 // it uses QPalette::cacheKey(), so it may not match even when the contents
@@ -460,6 +461,9 @@ Q_ALWAYS_INLINE quint64 fastfragile_hash_qpalette(const QPalette& p) {
   return h;
 #endif
 }
+#else
+#define fastfragile_hash_qpalette accurate_hash_qpalette
+#endif
 
 // This hash function is for when we want an actual accurate hash of a
 // QPalette. QPalette's cacheKey() isn't very reliable -- it seems to change to
@@ -474,7 +478,7 @@ uint accurate_hash_qpalette(const QPalette& p) {
   // great hasher anyway.
   QtPrivate::QHashCombine c;
   uint h = qHash(p.currentColorGroup());
-  QPalette::ColorRole const roles[] = {
+  constexpr QPalette::ColorRole const roles[] = {
       QPalette::Window,         QPalette::Button,     QPalette::Base,
       QPalette::Text,           QPalette::WindowText, QPalette::Highlight,
       QPalette::HighlightedText};
@@ -522,7 +526,7 @@ Q_NEVER_INLINE PhSwatchPtr deep_getCachedSwatchOfQPalette(
       ptr.detach();
     }
     ptr->loadFromQPalette(qpalette);
-    cache->prepend(PhCacheEntry(key, ptr));
+    cache->insert(cache->begin(), PhCacheEntry(key, ptr));
     return ptr;
   } else {
     if (idx == 0) {
@@ -533,7 +537,7 @@ Q_NEVER_INLINE PhSwatchPtr deep_getCachedSwatchOfQPalette(
     // want to depend on algorithm or write this myself. Small N with a movable
     // type means it doesn't really matter in this case.
     cache->remove(idx);
-    cache->prepend(e);
+    cache->insert(cache->begin(), e);
     return e.second;
   }
 }
@@ -2251,7 +2255,7 @@ void PhantomStyle::drawControl(ControlElement element,
     QColor dimHighlight(qMin(highlight.red() / 2 + 110, 255),
                         qMin(highlight.green() / 2 + 110, 255),
                         qMin(highlight.blue() / 2 + 110, 255));
-    dimHighlight.setAlpha(widget && widget->isTopLevel() ? 255 : 80);
+    dimHighlight.setAlpha(widget && widget->isWindow() ? 255 : 80);
     painter->setRenderHint(QPainter::Antialiasing, true);
     painter->translate(0.5, 0.5);
     painter->setBrush(dimHighlight);
@@ -2460,7 +2464,7 @@ void PhantomStyle::drawControl(ControlElement element,
           qMin(qMin(rect.height(), rect.width()), option->fontMetrics.height());
       auto window = widget ? widget->window()->windowHandle() : nullptr;
       QPixmap pixmap = header->icon.pixmap(
-          window, QSize(iconExtent, iconExtent),
+          QSize(iconExtent, iconExtent), window->devicePixelRatio(),
           (header->state & State_Enabled) ? QIcon::Normal : QIcon::Disabled);
       int pixw = (int)((qreal)pixmap.width() / pixmap.devicePixelRatio());
       QRect aligned =
@@ -2768,7 +2772,8 @@ void PhantomStyle::drawControl(ControlElement element,
       }
 #endif
       QWindow* window = widget ? widget->windowHandle() : nullptr;
-      QPixmap pixmap = menuItem->icon.pixmap(window, iconSize, mode, state);
+      QPixmap pixmap = menuItem->icon.pixmap(
+          iconSize, window->devicePixelRatio(), mode, state);
       const int pixw = (int)(pixmap.width() / pixmap.devicePixelRatio());
       const int pixh = (int)(pixmap.height() / pixmap.devicePixelRatio());
       QRect pixmapRect = QStyle::alignedRect(option->direction, Qt::AlignCenter,
@@ -2940,8 +2945,8 @@ void PhantomStyle::drawControl(ControlElement element,
           button->state & State_Enabled ? QIcon::Normal : QIcon::Disabled;
       QIcon::State state = button->state & State_On ? QIcon::On : QIcon::Off;
       auto window = widget ? widget->window()->windowHandle() : nullptr;
-      QPixmap pixmap =
-          button->icon.pixmap(window, button->iconSize, mode, state);
+      QPixmap pixmap = button->icon.pixmap(
+          button->iconSize, window->devicePixelRatio(), mode, state);
       int pixmapWidth =
           (int)((qreal)pixmap.width() / pixmap.devicePixelRatio());
       int pixmapHeight =
