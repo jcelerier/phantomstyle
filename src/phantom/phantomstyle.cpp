@@ -4180,7 +4180,9 @@ int PhantomStyle::pixelMetric(PixelMetric metric, const QStyleOption* option,
   case PM_MessageBoxIconSize:
     val = 48;
     break;
+#if QT_DEPRECATED_SINCE(6, 8)
   case PM_DialogButtonsSeparator:
+#endif
   case PM_ScrollBarSliderMin:
     val = 26;
     break;
