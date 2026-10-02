@@ -5149,6 +5149,13 @@ int PhantomStyle::styleHint(StyleHint hint, const QStyleOption* option,
   case SH_ComboBox_Popup: {
     if (!Phantom::UseQMenuForComboBoxPopup)
       return 0;
+#if QT_CONFIG(combobox) && QT_CONFIG(graphicsview)
+    // A combo box embedded in a QGraphicsScene has no screen to lay a QMenu
+    // out against: the menu wraps into columns once it is taller than the
+    // screen. The list drop-down bounds itself to maxVisibleItems and scrolls.
+    if (widget && widget->window()->graphicsProxyWidget())
+      return 0;
+#endif
 #if QT_CONFIG(combobox)
     // Fusion did this, but we don't because of font bugs (especially in high
     // DPI) with the QMenu that the combo box will create instead of a dropdown
