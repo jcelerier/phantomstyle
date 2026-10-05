@@ -5150,9 +5150,8 @@ int PhantomStyle::styleHint(StyleHint hint, const QStyleOption* option,
     if (!Phantom::UseQMenuForComboBoxPopup)
       return 0;
 #if QT_CONFIG(combobox) && QT_CONFIG(graphicsview)
-    // A combo box embedded in a QGraphicsScene has no screen to lay a QMenu
-    // out against: the menu wraps into columns once it is taller than the
-    // screen. The list drop-down bounds itself to maxVisibleItems and scrolls.
+    // In a QGraphicsScene, a QMenu popup has no screen to fit against and
+    // wraps into columns; the list drop-down scrolls instead.
     if (widget && widget->window()->graphicsProxyWidget())
       return 0;
 #endif
